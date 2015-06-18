@@ -9,8 +9,15 @@ if ($includeFiles) {
 }
 require(__DIR__ . '/../../../autoload.php');
 require(__DIR__ . '/../../../yiisoft/yii2/Yii.php');
-$config = require(__DIR__ . '/../../../../config/console.php');
-$application = new yii\web\Application($config);
+
+$config = yii\helpers\ArrayHelper::merge(
+    require(__DIR__ . '/../../../../common/config/main.php'),
+    require(__DIR__ . '/../../../../common/config/main-local.php'),
+    require(__DIR__ . '/../../../../console/config/main.php'),
+    require(__DIR__ . '/../../../../console/config/main-local.php')
+) ;
+
+$application = new yii\console\Application($config);
 
 # Turn off our amazing library autoload
 spl_autoload_unregister(array('Yii','autoload'));

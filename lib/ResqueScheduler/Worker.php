@@ -7,6 +7,15 @@
  * @copyright	(c) 2012 Chris Boulton
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
+namespace resque\lib\Resque;
+
+use resque\lib\Resque;
+use resque\lib\Resque\Resque_Stat;
+use resque\lib\Resque\Resque_Event;
+use resque\lib\Resque\Resque_Job;
+use resque\lib\MonologInit\MonologInit_MonologInit;
+use resque\lib\Resque\Job\Resque_Job_Status;
+
 class ResqueScheduler_Worker
 {
 	const LOG_NONE = 0;
