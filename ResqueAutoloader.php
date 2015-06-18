@@ -35,12 +35,11 @@ class ResqueAutoloader
     {
         //yii 2 advance;
         if(file_exists(\yii\BaseYii::$app->basePath.'/../frontend/components')){
-            $file= \yii\BaseYii::$app->basePath.'/../frontend/components';
+            $file= \yii\BaseYii::$app->basePath.'/../console/resque/workers/';
             if(scandir($file)){
             foreach (scandir($file) as $filename) {
                $path = $file. $filename;
                 if (is_file($path)) {
-
                     require_once $path;
                 }
             }
@@ -66,6 +65,10 @@ class ResqueAutoloader
         require_once(dirname(__FILE__) . '/lib/Resque/Stat.php');
         require_once(dirname(__FILE__) . '/lib/Resque/Job/Status.php');
         require_once(dirname(__FILE__) . '/lib/Resque/Exception.php');
+        
+        require_once(dirname(__FILE__) . '/lib/ResqueScheduler/InvalidTimestampException.php');
+        require_once(dirname(__FILE__) . '/lib/ResqueScheduler/Worker.php');
+
         require_once(dirname(__FILE__) . '/lib/MonologInit/MonologInit.php');
         
     }

@@ -15,6 +15,7 @@ use resque\lib\Resque\Resque_Event;
 use resque\lib\Resque\Resque_Job;
 use resque\lib\MonologInit\MonologInit_MonologInit;
 use resque\lib\Resque\Job\Resque_Job_Status;
+use resque\lib\ResqueScheduler;
 
 class ResqueScheduler_Worker
 {
@@ -91,7 +92,8 @@ class ResqueScheduler_Worker
 			));
 
 			$payload = array_merge(array($item['queue'], $item['class']), $item['args']);
-			call_user_func_array('Resque::enqueue', $payload);
+
+			call_user_func_array('\resque\lib\Resque::enqueue', $payload);
 		}
 	}
 	
