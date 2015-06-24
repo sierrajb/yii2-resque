@@ -12,6 +12,8 @@ if ($includeFiles) {
 }
 require(__DIR__ . '/../../../autoload.php');
 require(__DIR__ . '/../../../yiisoft/yii2/Yii.php');
+require(__DIR__ . '/../../../../common/config/bootstrap.php');
+
 
 $config = yii\helpers\ArrayHelper::merge(
     require(__DIR__ . '/../../../../common/config/main.php'),

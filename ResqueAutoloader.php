@@ -20,8 +20,7 @@ class ResqueAutoloader
     {
         spl_autoload_unregister(['Yii', 'autoload']);
         spl_autoload_register([new self,'autoload']);
-        spl_autoload_register(['Yii', 'autoload'], true, true);
-        
+        spl_autoload_register(['\yii\BaseYii', 'autoload'], true, true);        
     }
 
     /**
