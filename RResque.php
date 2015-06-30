@@ -48,7 +48,7 @@ class RResque extends \yii\base\Component
             # Turn off our amazing library autoload
             spl_autoload_unregister(['Yii', 'autoload']);
             # Include Autoloader library
-            include(dirname(__FILE__) . '/ResqueAutoloader.php');
+            include_once (dirname(__FILE__) . '/ResqueAutoloader.php');
              
             # Run request autoloader
             ResqueAutoloader::register();
