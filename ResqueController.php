@@ -46,12 +46,12 @@ EOD;
         return $return;
     }
 
-    public function actionStart($queue = '*', $interval = 5, $verbose = 1, $count = 1)
+    public function actionStart($queue = '*', $interval = 5, $verbose = 1, $count = 5)
     {
         $this->runCommand($queue, $interval, $verbose, $count, 'resque');
     }
 
-    public function actionStartrecurring($queue = '*', $interval = 5, $verbose = 1, $count = 1)
+    public function actionStartrecurring($queue = '*', $interval = 5, $verbose = 1, $count = 2)
     {
         $this->runCommand($queue, $interval, $verbose, $count, 'resque-scheduler');
     }
