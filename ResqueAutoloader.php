@@ -1,5 +1,5 @@
-<?php
-namespace resque\lib;
+<?php namespace resque\lib;
+
 use \yii\BaseYii;
 
 /**
@@ -10,17 +10,17 @@ use \yii\BaseYii;
  * For license and full copyright information please see main package file
  * @package       yii2-resque
  */
-
 class ResqueAutoloader
 {
+
     /**
      * Registers Raven_Autoloader as an SPL autoloader.
      */
     static public function register()
     {
         spl_autoload_unregister(['Yii', 'autoload']);
-        spl_autoload_register([new self,'autoload']);
-        spl_autoload_register(['\yii\BaseYii', 'autoload'], true, true);        
+        spl_autoload_register([new self, 'autoload']);
+        spl_autoload_register(['\yii\BaseYii', 'autoload'], true, true);
     }
 
     /**
@@ -32,43 +32,18 @@ class ResqueAutoloader
      */
     static public function autoload($class)
     {
-        //yii 2 advance;
-        if(file_exists(\yii\BaseYii::$app->basePath.'/../frontend/components')){
-            $file= \yii\BaseYii::$app->basePath.'/../console/resque/workers/';
-            if(scandir($file)){
-            foreach (scandir($file) as $filename) {
-               $path = $file. $filename;
-                if (is_file($path)) {
-                    require_once $path;
-                }
-            }
+        $workerPath = \yii\BaseYii::$app->basePath . '/../console/resque/';
+        $class = basename(str_replace('\\', '/', $class));
+        if (is_file($file = dirname(__FILE__) . '/lib/' . str_replace(array('_', "\0"), array('/', ''), $class) . '.php')) {
+            require $file;
+        } else if (is_file($file = dirname(__FILE__) . '/lib/ResqueScheduler/' . str_replace(array('_', "\0"), array('/', ''), $class) . '.php')) {
+            require $file;
+        } else if (is_file($file = dirname(__FILE__) . '/' . str_replace(array('_', "\0"), array('/', ''), $class) . '.php')) {
+            require $file;
+        } else if (is_file($file = dirname(__FILE__) . '/lib/' . str_replace(array('\\', "\0"), array('/', ''), $class) . '.php')) {
+            require $file;
+        } else if (is_file($file = ($workerPath . str_replace(array('_', "\0"), array('/', ''), $class)) . '.php')) {
+            require $file;
         }
-    }
-     // yii 2 basic
-    else{
-        $file= \Yii::getAlias('@app').'/components/';
-       foreach (scandir($file) as $filename) {
-            $path = $file. $filename;
-             if (is_file($path)) {
-                
-                 require_once $path;
-             }
-         }
-    }
-
-       
-        require_once(dirname(__FILE__) . '/lib/Resque/Job.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Event.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Redis.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Worker.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Stat.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Job/Status.php');
-        require_once(dirname(__FILE__) . '/lib/Resque/Exception.php');
-        
-        require_once(dirname(__FILE__) . '/lib/ResqueScheduler/InvalidTimestampException.php');
-        require_once(dirname(__FILE__) . '/lib/ResqueScheduler/Worker.php');
-
-        require_once(dirname(__FILE__) . '/lib/MonologInit/MonologInit.php');
-        
     }
 }

@@ -46,7 +46,7 @@ EOD;
         return $return;
     }
 
-    public function actionStart($queue = '*', $interval = 5, $verbose = 1, $count = 5)
+    public function actionStart($queue = '*', $interval = 5, $verbose = 1, $count = 1)
     {
         $this->runCommand($queue, $interval, $verbose, $count, 'resque');
     }
