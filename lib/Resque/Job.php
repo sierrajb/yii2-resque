@@ -41,7 +41,7 @@ class Resque_Job
 	{
 		$this->queue = $queue;
 		$this->payload = $payload;
-		if(file_exists(\yii\BaseYii::$app->basePath.'/../frontend/components')){
+		if(file_exists(\yii\BaseYii::$app->basePath.'/../console/components')){
             $this->payload['class'] =  "Worker_" . $this->payload['class'];
         }
         else{
