@@ -21,7 +21,7 @@ Installation
     "repositories":[
             {
                 "type": "git",
-                "url": "https://github.com/sprytechies/yii2-resque.git"
+                "url": "https://github.com/sierrajb/yii2-resque.git"
             }
         ],
     ```
@@ -33,14 +33,14 @@ Installation
     ```
 
     or add
-    
+
     ```
     "resque/yii2-resque": "dev-master"
     ```
 
     to the require section of your `composer.json` file.
 
-2.  Create a file `ResqueController.php` in app/commands folder(in case of yii2-basic) or console/controllers(in case of yii2- 
+2.  Create a file `ResqueController.php` in app/commands folder(in case of yii2-basic) or console/controllers(in case of yii2-
  advance) and write the following code in it.
     ```php
         namespace app\commands;
@@ -50,160 +50,211 @@ Installation
         use resque\lib\Resque\Resque_Worker;
         /**
          *
-         * @author Sprytechies
+         * @author sierrajb
          * @since 2.0
          */
         class ResqueController extends Controller
         {
             /**
-             * This command echoes what you have entered as the message.
-             * @param string $message the message to be echoed.
+             * Time to kill a worker, in minutes.
+             *
+             * @const
              */
-            public function actionIndex()
-            {
+            const DELAY_AUTO_CLOSE_WORK = 5;
 
-                    $includeFiles=getenv('INCLUDE_FILES');
-                    if ($includeFiles) {
-                        $includeFiles = explode(',', $includeFiles);
-                        foreach ($includeFiles as $file) {
-                            require_once $file;
-                        }
-                    }
-                    if(file_exists(Yii::getAlias('@app') . '/config/console.php')){
-                     // Yii2-Basic
-                    $config = require(Yii::getAlias('@app') . '/config/console.php');
-                    }else {
-                     // Yii2-Advance
-                    $config = require(Yii::getAlias('@app') . '/config/main.php');
-                    }
-                    $application = new \yii\console\Application($config);
+            /**
+             * Initialize Resque workers.
+             * @see http://php.net/manual/pt_BR/function.pcntl-fork.php
+             *
+             * @param int $logLevel
+             * @param int $workerCount
+             * @param string $queue
+             * @param int $interval
+             * @return void
+             */
+            public function actionStart(
+                $logLevel = 1,
+                $workerCount = 1,
+                $queue = '*',
+                $interval = 5
+            ) {
+                $resque = Yii::$app->resque;
+                $this->setYiiConfiguration();
 
-                    # Turn off our amazing library autoload
-                    spl_autoload_unregister(array('Yii','autoload'));
-                    
-                    if(file_exists(Yii::getAlias('@vendor') . '/resque/yii2-resque/ResqueAutoloader.php')){
-                    // Yii2-Basic
-                    require_once(Yii::getAlias('@vendor') . '/resque/yii2-resque/ResqueAutoloader.php');
-                    }else {
-                      // Yii2-Advance
-                    require_once(Yii::getAlias('@app') . '/../vendor/resque/yii2-resque/ResqueAutoloader.php');
-                    }
-                    ResqueAutoloader::register();
+                for ($i = 0; $i < $workerCount; ++$i) {
+                    // Forks this process as it's child.
+                    // For the forked process 0 will be returned.
+                    // For the parent process the child proccess id will be returned.
+                    $pid = $this->createResqueFork();
 
-                    # Give back the power to Yii
-                    spl_autoload_register(array('Yii','autoload'));
-
-                    $QUEUE = getenv('QUEUE');
-                    if(empty($QUEUE)) {
-                        die("Set QUEUE env var containing the list of queues to work.\n");
+                    if ($pid == -1) {
+                        die('Could not create fork ' . $i . PHP_EOL);
                     }
 
-                    $REDIS_BACKEND = getenv('REDIS_BACKEND');
-                    $REDIS_BACKEND_DB = getenv('REDIS_BACKEND_DB');
-                    $REDIS_AUTH = getenv('REDIS_AUTH');
-
-                    if(!empty($REDIS_BACKEND)) {
-                        $REDIS_BACKEND_DB = (!empty($REDIS_BACKEND_DB)) ? $REDIS_BACKEND_DB : 0;
-                        Resque::setBackend($REDIS_BACKEND, $REDIS_BACKEND_DB, $REDIS_AUTH);
+                    // if this is a fork, so lets start to work!
+                    if ($pid == 0) {
+                        return $this->startWorker($queue, $logLevel, $interval);
                     }
 
-                    $logLevel = 0;
-                    $LOGGING = getenv('LOGGING');
-                    $VERBOSE = getenv('VERBOSE');
-                    $VVERBOSE = getenv('VVERBOSE');
-                    if(!empty($LOGGING) || !empty($VERBOSE)) {
-                        $logLevel = Resque_Worker::LOG_NORMAL;
-                    } else if(!empty($VVERBOSE)) {
-                        $logLevel = Resque_Worker::LOG_VERBOSE;
-                    }
-
-                    $logger = null;
-                    $LOG_HANDLER = getenv('LOGHANDLER');
-                    $LOG_HANDLER_TARGET = getenv('LOGHANDLERTARGET');
-
-                    if (class_exists('MonologInit_MonologInit')) {
-                        if (!empty($LOG_HANDLER) && !empty($LOG_HANDLER_TARGET)) {
-                            $logger = new MonologInit_MonologInit($LOG_HANDLER, $LOG_HANDLER_TARGET);
-                        } else {
-                            fwrite(STDOUT, '*** loghandler or logtarget is not set.'."\n");    
-                        }
-                    } else {
-                        fwrite(STDOUT, '*** MonologInit_MonologInit logger cannot be found, continue without loghandler.'."\n");
-                    }
-
-                    $interval = 5;
-                    $INTERVAL = getenv('INTERVAL');
-                    if(!empty($INTERVAL)) {
-                        $interval = $INTERVAL;
-                    }
-
-                    $count = 1;
-                    $COUNT = getenv('COUNT');
-                    if(!empty($COUNT) && $COUNT > 1) {
-                        $count = $COUNT;
-                    }
-
-                    $PREFIX = getenv('PREFIX');
-                    if(!empty($PREFIX)) {
-                        fwrite(STDOUT, '*** Prefix set to '.$PREFIX."\n");
-                        Resque::redis()->prefix($PREFIX);
-                    }
-
-                    if($count > 1) {
-                        for($i = 0; $i < $count; ++$i) {
-                            $pid = Resque::fork();
-                            if($pid == -1) {
-                                die("Could not fork worker ".$i."\n");
-                            }
-                            // Child, start the worker
-                            else if(!$pid) {
-                                startWorker($QUEUE, $logLevel, $logger, $interval);
-                                break;
-                            }
-                        }
-                    }
-                    // Start a single worker
-                    else {
-                        $PIDFILE = getenv('PIDFILE');
-                        if ($PIDFILE) {
-                            file_put_contents($PIDFILE, getmypid()) or
-                                die('Could not write PID information to ' . $PIDFILE);
-                        }
-
-                        $this->startWorker($QUEUE, $logLevel, $logger, $interval);
-                    }
+                    // this is the parent, so we have a child pid
+                    // we call nohup to create a non-blocking process to kill
+                    // the child after a couple of minutes.
+                    print('PID: ' . $pid . PHP_EOL);
+                    $time = self::DELAY_AUTO_CLOSE_WORK * 60;
+                    $this->executeCommand(implode([' ',
+                        'nohup',
+                        './yii queue/service/stop',
+                        $pid,
+                        $time
+                    ]));
+                }
             }
 
-            function startWorker($QUEUE, $logLevel, $logger, $interval)
+            /**
+             * Stop a Worker or all workers.
+             * If the pid is null, all workers will be killed.
+             *
+             * @param int|null $pid process id
+             * @param int $delay
+             * @return void
+             */
+            public function actionStop($pid = null, $delay = 0)
             {
-                $queues = explode(',', $QUEUE);
+                if ($delay) {
+                    print('Waiting ' . $delay . ' seconds.');
+                    sleep($delay);
+                }
+
+                Yii::info(Yii::t('resque', 'labels.stop_workers'), 'resque');
+
+                // lists all proccesses.
+                $processList = 'ps uxe';
+
+                // filters those that belongs to this system path.
+                $path = 'grep ' . escapeshellarg(Yii::$app->basePath);
+
+                // filters the start proccess.
+                $command = 'grep \'queue/service/start\'';
+
+                // removes this search from the list.
+                $removeGrep = 'grep -v grep';
+
+                // get the pid.
+                $pidFilter = 'awk {\'print $2\'}';
+
+                if ($pid) {
+                    // filters the choosen pid and kills it.
+                    $kill = 'grep ' . $pid . ' | xargs kill -s QUIT';
+                } else {
+                    // kill them all.
+                    $kill = 'xargs kill -9';
+                }
+
+                $this->executeCommand(implode(' | ', [
+                    $processList,
+                    $path,
+                    $command,
+                    $removeGrep,
+                    $pidFilter,
+                    $kill
+                ]));
+            }
+
+            /**
+             * Start Workers to proccess the queue.
+             *
+             * @param string $queue
+             * @param int $logLevel
+             * @param int $interval
+             * @return void
+             */
+            protected function startWorker($queue, $logLevel, $interval)
+            {
+                $queues = explode(',', $queue);
                 $worker = new Resque_Worker($queues);
 
-                if (!empty($logger)) {
-                    $worker->registerLogger($logger);    
-                } else {
-                    fwrite(STDOUT, '*** Starting worker '.$worker."\n");
-                }
+                Yii::info(Yii::t('resque', 'labels.start_worker', [
+                    'worker' => $worker
+                ]), 'resque');
 
                 $worker->logLevel = $logLevel;
                 $worker->work($interval);
             }
+
+            /**
+             * Prepares the system to handle all requests.
+             * Loads the the needed modules.
+             *
+             * @return void
+             */
+            protected function setYiiConfiguration()
+            {
+                $app = Yii::getAlias('@app');
+                if (file_exists($app . '/config/console.php')) {
+                    // Yii2-Basic
+                    $config = require($app . '/config/console.php');
+                } else {
+                    // Yii2-Advance
+                    $config = require($app . '/config/main.php');
+                }
+                $application = new \yii\console\Application($config);
+
+                # Turn off our amazing library autoload
+                spl_autoload_unregister(array('Yii','autoload'));
+
+                $vendor = Yii::getAlias('@vendor');
+                if (file_exists($vendor . '/resque/yii2-resque/ResqueAutoloader.php')) {
+                    // Yii2-Basic
+                    require_once($vendor . '/resque/yii2-resque/ResqueAutoloader.php');
+                } else {
+                    // Yii2-Advance
+                    require_once($app . '/../vendor/resque/yii2-resque/ResqueAutoloader.php');
+                }
+
+                ResqueAutoloader::register();
+
+                # Give back the power to Yii
+                spl_autoload_register(array('Yii','autoload'));
+            }
+
+            /**
+             * Forks this process and returns it's process id.
+             * If this is the child, zero will be returned.
+             * If this is creator process, the child process id will be returned.
+             *
+             * @return integer
+             */
+            protected function createResqueFork()
+            {
+                return Resque::fork();
+            }
+
+            /**
+             * Executes the command.
+             *
+             * @param string $command
+             * @return void
+             */
+            protected function executeCommand($command)
+            {
+                exec($command);
+            }
         }
 
     ```
-    
+
 3.  Add these in your config/web.php and in your config/console.php(in case of yii2-basic) or console/config/main.php and common/config/main-local.php (in case of yii2- advance)
 
     ```php
     'components' => [
         ...
-        'resque' => [ 
-            'class' => '\resque\RResque', 
+        'resque' => [
+            'class' => '\resque\RResque',
             'server' => 'localhost',     // Redis server address
             'port' => '6379',            // Redis server port
             'database' => 0,             // Redis database number
             'password' => '',            // Redis password auth, set to '' or null when no auth needed
-        ], 
+        ],
         ...
     ]
     ```
@@ -215,10 +266,10 @@ Usage
 
 Once the extension is installed  :
 
-1.  Create a folder `components` in your app(yii2-basic).in case of yii2-advance template create this folder inside app(like frontend) 
+1.  Create a folder `components` in your app(yii2-basic).in case of yii2-advance template create this folder inside app(like frontend)
     You can put all your class files into this `components` folder.Change namespace as per your application.
 
-    Example - 
+    Example -
 
     ```php
     namespace app\components;
@@ -243,7 +294,7 @@ Once the extension is installed  :
     }
     ```
 
- 
+
    Create job and Workers
     ----------------------
 
@@ -264,7 +315,7 @@ Once the extension is installed  :
     or run job after n second
     ```php
         $in = 3600;
-        $args = ['id' => $user->id];    
+        $args = ['id' => $user->id];
         Yii::$app->resque->enqueueIn($in, 'email', 'ClassWorker', $args);
     ```
     Get Current Queues
