@@ -6,7 +6,6 @@ use resque\lib\Resque\Resque_Job;
 use resque\lib\Resque\Resque_Redis;
 use resque\lib\Resque\Resque_Event;
 
-
 /**
  * Base Resque class.
  *
@@ -35,9 +34,14 @@ class Resque
     protected static $redisDatabase = 0;
 
     /**
-     * @var int ID of Redis database to select.
+     * @var string Redis auth password.
      */
     protected static $redisPassword = '';
+
+    /**
+     * @var int Redis database connection timeout.
+     */
+    protected static $redisConnectTimeout = '';
 
     /**
      * Given a host/port combination separated by a colon, set it as
@@ -47,7 +51,7 @@ class Resque
      *                      a nested array of servers with host/port pairs.
      * @param int $database
      */
-    public static function setBackend($server, $database = 0, $password = '')
+    public static function setBackend($server, $database = 0, $password = '', $timeout = 5)
     {
         self::$redisServer   = $server;
         self::$redisDatabase = $database;
@@ -70,11 +74,10 @@ class Resque
         if (empty($server)) {
             $server = 'localhost:6379';
         }
-        
-        
-        
-        self::$redis = new Resque_Redis($server, self::$redisDatabase, self::$redisPassword);
-        
+
+
+        self::$redis = new Resque_Redis($server, self::$redisDatabase, self::$redisPassword, self::$redisConnectTimeout);
+
         # Select Database
         self::$redis->select(self::$redisDatabase);
         //echo "<pre>";print_r(self::$redis);
@@ -92,7 +95,7 @@ class Resque
      */
     public static function fork()
     {
-        if(!function_exists('pcntl_fork')) {
+        if (!function_exists('pcntl_fork')) {
             return -1;
         }
 
@@ -101,7 +104,7 @@ class Resque
         self::$redis = null;
 
         $pid = pcntl_fork();
-        if($pid === -1) {
+        if ($pid === -1) {
             throw new RuntimeException('Unable to fork child worker.');
         }
 
@@ -117,7 +120,7 @@ class Resque
      */
     public static function push($queue, $item)
     {
-        
+
         self::redis()->sadd('queues', $queue);
         self::redis()->rpush('queue:' . $queue, json_encode($item));
 //        self::redis()->get('queue:mohit');
@@ -133,7 +136,7 @@ class Resque
     public static function pop($queue)
     {
         $item = self::redis()->lpop('queue:' . $queue);
-        if(!$item) {
+        if (!$item) {
             return;
         }
 
@@ -164,12 +167,12 @@ class Resque
      */
     public static function enqueue($queue, $class, $args = null, $trackStatus = false)
     {
-        
-        
+
+
         $result = Resque_Job::create($queue, $class, $args, $trackStatus);
-        	
+
         if ($result) {
-            
+
             Resque_Event::trigger('afterEnqueue', array(
                 'class' => $class,
                 'args'  => $args,
@@ -199,7 +202,7 @@ class Resque
     public static function queues()
     {
         $queues = self::redis()->smembers('queues');
-        if(!is_array($queues)) {
+        if (!is_array($queues)) {
             $queues = array();
         }
         return $queues;
