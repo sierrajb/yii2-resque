@@ -6,11 +6,11 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Sprytechies",
-            "email": "devteam01@sprytechies.com"
+            "name": "Ricardo Sierra",
+            "email": "contato@ricardosierra.com.br"
         }
     ],
-    
+
     "autoload": {
         "psr-4": {
             "resque\\": ""
