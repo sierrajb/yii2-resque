@@ -32,6 +32,7 @@ class RResque extends \yii\base\Component
      * @var int Redis database connection timeout
      */
     public $timeout = 5;
+
     public $prefix = '';
 
     /**
@@ -108,32 +109,32 @@ class RResque extends \yii\base\Component
     /**
      * Create a new scheduled job and save it to the specified queue.
      *
-     * @param int $in Second count down to job.
+     * @param int $delay Second count down to job.
      * @param string $queue The name of the queue to place the job in.
      * @param string $class The name of the class that contains the code to execute the job.
      * @param array $args Any optional arguments that should be passed when the job is executed.
      *
      * @return string
      */
-    public function enqueueJobIn($in, $queue, $class, $args = array())
+    public function enqueueJobIn($delay, $queue, $class, $args = array())
     {
-        return ResqueScheduler::enqueueIn($in, $queue, $class, $args);
+        return ResqueScheduler::enqueueIn($delay, $queue, $class, $args);
     }
 
     /**
      * Create a new scheduled job and save it to the specified queue.
      *
-     * @param timestamp $at UNIX timestamp when job should be executed.
+     * @param timestamp $scheduleTimestamp UNIX timestamp when job should be executed.
      * @param string $queue The name of the queue to place the job in.
      * @param string $class The name of the class that contains the code to execute the job.
      * @param array $args Any optional arguments that should be passed when the job is executed.
      *
      * @return string
      */
-    public function enqueueJobAt($at, $queue, $class, $args = array())
+    public function enqueueJobAt($scheduleTimestamp, $queue, $class, $args = array())
     {
 
-        return ResqueScheduler::enqueueAt($at, $queue, $class, $args);
+        return ResqueScheduler::enqueueAt($scheduleTimestamp, $queue, $class, $args);
     }
 
     /**
